@@ -14,6 +14,13 @@ on:
         description: Charmcraft channel to use for publishing the charm and resources
         type: string
         default: latest/stable
+      extra-ignored-file-patterns:
+        description: >-
+          Additional extended-regex (grep -E) patterns for files that should not trigger publishing, on top of the
+          built-in defaults (*.md, terraform*). Use the same value as the integration test workflow, which skips
+          its builds for these files and so leaves nothing to publish.
+        type: string
+        default: ""
       force-publish:
         description: Evaluate the detection of changes different from documentation to True
         type: boolean
@@ -100,13 +107,19 @@ jobs:
             fetch-depth: 0
       - name: Find changes
         id: changes
+        env:
+          EXTRA_IGNORED_FILE_PATTERNS: ${{ inputs.extra-ignored-file-patterns }}
         run: |
           if [[ "${{ inputs.force-publish }}" == "true" ]]; then
             echo "has_code_changes=True"
             exit 0
           fi
           CHANGED_FILES=$(git diff --name-only "${{ github.event.before }}" "${{ github.event.after }}")
-          CODE_FILE_CHANGES=$(echo "$CHANGED_FILES" | grep -v "\.md$" | grep -v "^terraform" | wc -l)
+          IGNORED_PATTERNS="\.md$|^terraform"
+          if [ -n "$EXTRA_IGNORED_FILE_PATTERNS" ]; then
+            IGNORED_PATTERNS="${IGNORED_PATTERNS}|${EXTRA_IGNORED_FILE_PATTERNS}"
+          fi
+          CODE_FILE_CHANGES=$(echo "$CHANGED_FILES" | grep -Ev "$IGNORED_PATTERNS" | wc -l)
           echo "has_code_changes=$([[ $CODE_FILE_CHANGES -eq "0" ]] && echo 'False' || echo 'True')" >> $GITHUB_OUTPUT
 
   publish-charm:

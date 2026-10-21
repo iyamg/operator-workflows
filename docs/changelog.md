@@ -6,6 +6,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-10-21
+
+- Add `extra-ignored-file-patterns` input to the `publish_charm.yaml` workflow, matching the one in
+`integration_test.yaml`. Without it, a push that only touches files ignored by the integration tests
+still tried to publish and failed on the missing build artifacts.
+
 ## 2026-10-09
 
 - Always add `~/.local/bin` to `PATH` in the `integration_test.yaml` build job, so tools installed by
