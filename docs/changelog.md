@@ -6,6 +6,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-11-23
+
+- Fix `force-publish: true` in `publish_charm.yaml`. The "Find changes" step did not write its result to the
+step output, so charms were not published when only docs changed.
+
 ## 2026-11-20
 
 - Queue Terraform module releases per tag prefix without blocking pull request checks.

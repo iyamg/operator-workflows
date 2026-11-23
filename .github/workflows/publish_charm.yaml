@@ -102,7 +102,7 @@ jobs:
         id: changes
         run: |
           if [[ "${{ inputs.force-publish }}" == "true" ]]; then
-            echo "has_code_changes=True"
+            echo "has_code_changes=True" >> "$GITHUB_OUTPUT"
             exit 0
           fi
           CHANGED_FILES=$(git diff --name-only "${{ github.event.before }}" "${{ github.event.after }}")
