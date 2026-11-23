@@ -49,7 +49,7 @@ on:
           running within the same workflow. It is recommended to set this identifier to the job name.
         default: ""
       extra-ignored-file-patterns:
-        description: Additional extended-regex (grep -E) patterns for files that should not trigger the build/integration-test jobs, on top of the built-in defaults (*.md, *.rst, *.custom_wordlist.txt, LICENSE)
+        description: Additional extended-regex (grep -E) patterns for files that should not trigger the build/integration-test jobs, on top of the built-in defaults (*.md, *.rst, *.custom_wordlist.txt, LICENSE). An invalid pattern, or one that matches every path, fails the job.
         type: string
         default: ""
       modules:
@@ -201,14 +201,28 @@ jobs:
           has_code_changes=True
           if [ "${{ github.event_name }}" = "pull_request" ]; then
             REMOTE=$(git remote show)
-            CHANGED_FILES=$(git diff --name-only "$REMOTE/${{ github.event.pull_request.base.ref }}" "${{ github.event.pull_request.head.sha }}")
+            CHANGED_FILES=$(git -c core.quotepath=off diff --no-renames --name-only "$REMOTE/${{ github.event.pull_request.base.ref }}" "${{ github.event.pull_request.head.sha }}")
             IGNORED_PATTERNS="\.md$|\.rst$|\.custom_wordlist\.txt$|^LICENSE$"
             EXTRA_IGNORED_PATTERNS="$EXTRA_IGNORED_FILE_PATTERNS"
             if [ -n "$EXTRA_IGNORED_PATTERNS" ]; then
               IGNORED_PATTERNS="${IGNORED_PATTERNS}|${EXTRA_IGNORED_PATTERNS}"
             fi
-            CODE_FILE_CHANGES=$(echo "$CHANGED_FILES" | grep -Ev "$IGNORED_PATTERNS" | wc -l)
-            has_code_changes=$([[ $CODE_FILE_CHANGES -eq "0" ]] && echo 'False' || echo 'True')
+            # Fail instead of skipping the tests: grep exits 0 if the pattern matches an empty line, 2 if it is invalid.
+            status=0
+            printf '\n' | grep -qE -- "$IGNORED_PATTERNS" || status=$?
+            case "$status" in
+              0) echo "::error::extra-ignored-file-patterns matches every path; check it for a trailing newline or an empty alternative."; exit 1 ;;
+              1) ;;
+              *) echo "::error::extra-ignored-file-patterns is not a valid extended regular expression."; exit 1 ;;
+            esac
+            # An empty diff yields one empty line, which is never ignored, so the tests run.
+            status=0
+            printf '%s\n' "$CHANGED_FILES" | grep -qvE -- "$IGNORED_PATTERNS" || status=$?
+            case "$status" in
+              0) ;;
+              1) has_code_changes=False ;;
+              *) exit 1 ;;
+            esac
           fi
           echo "has_code_changes=$has_code_changes" >> $GITHUB_OUTPUT
 

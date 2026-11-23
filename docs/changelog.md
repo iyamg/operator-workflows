@@ -6,6 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 Each revision is versioned by the date of the revision.
 
+## 2026-11-23
+
+- Fail the `integration_test.yaml` plan job when `extra-ignored-file-patterns` is not a valid
+regular expression or matches every path (e.g. a trailing newline), instead of silently skipping
+the build and integration tests. Renamed files now count by their old path too, and non-ASCII
+paths are matched unquoted.
+
 ## 2026-11-20
 
 - Queue Terraform module releases per tag prefix without blocking pull request checks.
